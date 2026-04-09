@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BMR・TDEE計算機</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background: #f0f4f8;
+      color: #333;
+      padding: 24px 16px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+      color: #2d3748;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #718096;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 600px;
+      margin: 0 auto 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #4a5568;
+    }
+
+    input, select {
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+      color: #2d3748;
+      background: #f7fafc;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #4299e1;
+      background: white;
+    }
+
+    .gender-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    .gender-btn {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      background: #f7fafc;
+      cursor: pointer;
+      font-size: 0.95rem;
+      text-align: center;
+      transition: all 0.2s;
+      color: #4a5568;
+    }
+
+    .gender-btn.active {
+      border-color: #4299e1;
+      background: #ebf8ff;
+      color: #2b6cb0;
+      font-weight: 600;
+    }
+
+    button.calc-btn {
+      width: 100%;
+      padding: 14px;
+      background: #4299e1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: background 0.2s;
+    }
+
+    button.calc-btn:hover {
+      background: #3182ce;
+    }
+
+    .result-card {
+      background: white;
+      border-radius: 12px;
+      max-width: 600px;
+      margin: 0 auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      overflow: hidden;
+      display: none;
+    }
+
+    .result-title {
+      padding: 16px 24px;
+      background: #2d3748;
+      color: white;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      background: #edf2f7;
+      padding: 12px 16px;
+      text-align: center;
+      font-size: 0.82rem;
+      color: #4a5568;
+      font-weight: 600;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    tbody td {
+      padding: 12px 16px;
+      text-align: center;
+      font-size: 0.95rem;
+      border-bottom: 1px solid #f0f4f8;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr.current-row {
+      background: #ebf8ff;
+      font-weight: 600;
+    }
+
+    tbody tr.current-row td {
+      color: #2b6cb0;
+    }
+
+    tbody tr:hover {
+      background: #f7fafc;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      background: #4299e1;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .note {
+      padding: 12px 24px;
+      font-size: 0.78rem;
+      color: #718096;
+      background: #f7fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    @media (max-width: 480px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.full-width { grid-column: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>BMR・TDEE 計算機</h1>
+  <p class="subtitle">体重減少に伴う基礎代謝・活動代謝の変化を確認できます</p>
+
+  <div class="card">
+    <div class="form-grid">
+
+      <div class="form-group full-width">
+        <label>性別</label>
+        <div class="gender-group">
+          <div class="gender-btn active" id="btn-male" onclick="selectGender('male')">男性</div>
+          <div class="gender-btn" id="btn-female" onclick="selectGender('female')">女性</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>年齢（歳）</label>
+        <input type="number" id="age" placeholder="例: 35" min="10" max="100">
+      </div>
+
+      <div class="form-group">
+        <label>身長（cm）</label>
+        <input type="number" id="height" placeholder="例: 170" min="100" max="250">
+      </div>
+
+      <div class="form-group">
+        <label>現在の体重（kg）</label>
+        <input type="number" id="currentWeight" placeholder="例: 85" min="30" max="300" step="0.1">
+      </div>
+
+      <div class="form-group">
+        <label>目標体重（kg）</label>
+        <input type="number" id="targetWeight" placeholder="例: 80" min="30" max="300" step="0.1">
+      </div>
+
+      <div class="form-group full-width">
+        <label>普段の活動レベル</label>
+        <select id="activity">
+          <option value="1.2">座りがち（デスクワーク中心、ほぼ運動なし）</option>
+          <option value="1.375">軽い運動（週1〜3日）</option>
+          <option value="1.55" selected>中程度の運動（週3〜5日）</option>
+          <option value="1.725">ハードな運動（週6〜7日）</option>
+          <option value="1.9">非常にハード（肉体労働 or 1日2回トレーニング）</option>
+        </select>
+      </div>
+
+    </div>
+
+    <button class="calc-btn" onclick="calculate()">計算する</button>
+  </div>
+
+  <div class="result-card" id="resultCard">
+    <div class="result-title" id="resultTitle"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>体重</th>
+          <th>BMR（基礎代謝）</th>
+          <th>TDEE（活動代謝）</th>
+        </tr>
+      </thead>
+      <tbody id="resultBody"></tbody>
+    </table>
+    <div class="note">
+      BMR：Mifflin-St Jeor式で算出｜TDEE = BMR × 活動レベル係数<br>
+      BMR：安静時に消費するカロリー｜TDEE：1日の総消費カロリー
+    </div>
+  </div>
+
+  <script>
+    let gender = 'male';
+
+    function selectGender(g) {
+      gender = g;
+      document.getElementById('btn-male').classList.toggle('active', g === 'male');
+      document.getElementById('btn-female').classList.toggle('active', g === 'female');
+    }
+
+    function calcBMR(weight, height, age, gender) {
+      const base = 10 * weight + 6.25 * height - 5 * age;
+      return gender === 'male' ? base + 5 : base - 161;
+    }
+
+    function calculate() {
+      const age = parseInt(document.getElementById('age').value);
+      const height = parseFloat(document.getElementById('height').value);
+      const currentWeight = parseFloat(document.getElementById('currentWeight').value);
+      const targetWeight = parseFloat(document.getElementById('targetWeight').value);
+      const activity = parseFloat(document.getElementById('activity').value);
+
+      if (!age || !height || !currentWeight || !targetWeight) {
+        alert('すべての項目を入力してください');
+        return;
+      }
+
+      if (targetWeight > currentWeight) {
+        alert('目標体重は現在体重より小さい値を入力してください');
+        return;
+      }
+
+      const tbody = document.getElementById('resultBody');
+      tbody.innerHTML = '';
+
+      for (let w = currentWeight; w >= targetWeight - 0.001; w = Math.round((w - 1) * 10) / 10) {
+        const bmr = Math.round(calcBMR(w, height, age, gender));
+        const tdee = Math.round(bmr * activity);
+        const isCurrentWeight = Math.abs(w - currentWeight) < 0.001;
+
+        const tr = document.createElement('tr');
+        if (isCurrentWeight) tr.classList.add('current-row');
+
+        tr.innerHTML = `
+          <td>${w.toFixed(1)} kg${isCurrentWeight ? '<span class="badge">現在</span>' : ''}</td>
+          <td>${bmr.toLocaleString()} kcal</td>
+          <td>${tdee.toLocaleString()} kcal</td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      const activityLabels = {
+        '1.2': '座りがち',
+        '1.375': '軽い運動（週1〜3日）',
+        '1.55': '中程度の運動（週3〜5日）',
+        '1.725': 'ハードな運動（週6〜7日）',
+        '1.9': '非常にハード'
+      };
+
+      document.getElementById('resultTitle').textContent =
+        `${gender === 'male' ? '男性' : '女性'} / ${age}歳 / ${height}cm｜活動レベル：${activityLabels[String(activity)]}`;
+
+      document.getElementById('resultCard').style.display = 'block';
+      document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+    }
+  </script>
+
+</body>
+</html>
